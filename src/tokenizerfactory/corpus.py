@@ -64,6 +64,7 @@
 from __future__ import annotations
 
 import re
+from functools import lru_cache
 from typing import Iterable
 
 from .schema import CorpusStats
@@ -188,8 +189,14 @@ def detokenize_words(words: Iterable[str]) -> str:
 # ----------------------------------------------------------------------
 # 字符分类与画像
 # ----------------------------------------------------------------------
+@lru_cache(maxsize=None)
 def char_class(ch: str) -> str:
-    """单个字符属于哪一类（用于语料画像）。"""
+    """单个字符属于哪一类（用于语料画像）。
+
+    纯函数（只依赖 ch），所以记忆化是安全的。``corpus_stats`` 会对语料里
+    **每一个字符**各调一次，而语料的字符集只有几百个 —— 于是绝大多数调用
+    都是同一批字符的重复，白白重跑最多 6 次正则匹配。
+    """
     if ch == SPACE_MARKER:
         return "marker"
     for name, pattern in _CLASS_PATTERNS:
