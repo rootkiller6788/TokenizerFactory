@@ -168,7 +168,8 @@ def frontier_rows(result: TokenizerResult, key: str) -> list[tuple[str, ...]]:
     if not ids:
         return []
     points = {r.spec_id: point_of(r) for r in result.runs}
-    contributions = hv_contributions(sorted(points), points, objectives)
+    all_ids = sorted(points)
+    contributions = hv_contributions(all_ids, points, objectives)
     ordered = sorted(ids, key=lambda i: (points[i][objectives[0]], i))
     show_actual = _frontier_shows_actual_vocab(objectives)
 
@@ -182,7 +183,7 @@ def frontier_rows(result: TokenizerResult, key: str) -> list[tuple[str, ...]]:
             cells.append(str(int(points[sid]["vocab_size_actual"])))
         cells += [format_objective(o, points[sid][o]) for o in objectives]
         cells += [
-            str(dominated_count(sid, sorted(points), points, objectives)),
+            str(dominated_count(sid, all_ids, points, objectives)),
             f"{contributions.get(sid, 0.0):,.1f}",
         ]
         rows.append(tuple(cells))
