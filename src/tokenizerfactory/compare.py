@@ -336,11 +336,16 @@ def assemble(result: TokenizerResult, cfg: dict[str, Any]) -> None:
         frontiers[key] = non_dominated(ids, points, pair)
     result.frontiers = frontiers
 
+    # 先把「成员 → 它所在的目标对」倒排一次，再逐行取。
+    # 原来是每行都把所有前沿的成员列表扫一遍，行列一多就是白扫。
+    memberships: dict[str, list[str]] = {}
+    for key, members in frontiers.items():
+        for sid in members:
+            memberships.setdefault(sid, []).append(key)
+
     matrix = build_matrix(result, cfg)
     for row in matrix:
-        row["frontier"] = sorted(
-            key for key, members in frontiers.items() if row["spec_id"] in members
-        )
+        row["frontier"] = sorted(memberships.get(row["spec_id"], []))
     result.matrix = matrix
 
     selected, reason = select(result, cfg)
