@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import hashlib
 from abc import ABC, abstractmethod
+from collections import Counter
 from typing import Any, ClassVar, Sequence
 
 from ..corpus import SPACE_MARKER
@@ -75,7 +76,11 @@ class Tokenizer(ABC):
         self.vocab: list[str] = list(vocab)
 
         if len(set(self.vocab)) != len(self.vocab):
-            dupes = sorted({t for t in self.vocab if self.vocab.count(t) > 1})
+            # 一次 Counter 扫完，而不是对每个 token 各做一次 list.count
+            # （后者在几千个 token 的词表上是 O(n²)，而且只在报错路径上跑，
+            #  平时看不出来）
+            counts = Counter(self.vocab)
+            dupes = sorted(t for t, n in counts.items() if n > 1)
             raise ValueError(
                 f"词表出现重复 token：{dupes[:5]} —— 重复会让 id 映射指向前一个，"
                 "且 vocab_digest 不再唯一标识这个分词器"
