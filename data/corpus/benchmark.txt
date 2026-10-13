@@ -1,0 +1,60 @@
+评测语料和训练语料必须来自同一分布，否则量出来的数字没有意义。
+我们用另一批句子来做评测，主题相近但句子不重复，这样既能量出泛化能力，
+又不会因为主题完全不同而把未知率抬得虚高。
+
+分词器是一个有损的压缩器。它把无穷多的字符串映射到有限的编号上，
+对于训练时没见过的字符串，这个映射是不可逆的。设计的目标是让损失变小，
+而且只对那些真正重要的文本变小。这就是为什么训练语料和评测语料要同源，
+也是为什么在训练语料上评测几乎没有信息量。
+
+中文和英文的字符分布差别很大。英文只用几十个字符就能覆盖绝大部分文本，
+中文要用几千个字符才能覆盖同样比例。这个差别会直接反映在词表的分配上。
+如果一个模型要同时服务两种语言，词表的预算就必须在两者之间分配，
+而不是按其中一种语言的需求来定。
+
+我们还要看序列长度。序列越长，注意力的开销越大，推理越慢，成本越高。
+压缩率高意味着同样的文本用更少的符号表示，于是序列更短、成本更低。
+但压缩率高不等于效果好：如果压缩是靠丢掉信息换来的，那效果只会更差。
+所以压缩率必须和未知率一起看，不能单独看。
+
+覆盖率和未知率是一对。覆盖率高说明词表能完整表示大部分词，
+未知率低说明落到兜底符号上的比例小。两者从不同角度描述同一件事，
+但它们的口径不一样：覆盖率按词算，未知率按符号算。
+一个词只要有一个字符不认识就会拉低覆盖率，但它对未知率的影响可能很小。
+
+速度是另一个容易被忽略的维度。词表越大，匹配的候选越多，编码越慢。
+这个差别在小规模上不明显，但在高并发的服务里会变成真实的机器成本。
+我们做了多轮测量并取中位数，因为单轮测量会被机器的降频和调度噪声带偏。
+
+最后是取舍。没有一个配置能在压缩、覆盖、速度、表大小上同时最好。
+报告给出的是前沿，也就是那些不被别的配置全面超过的点。
+具体选哪一个，取决于哪一方面是硬约束。本项目把「词表预算」当成硬约束，
+因为参数表的规模直接决定了显存占用，这是部署时最先被卡住的地方。
+
+The evaluation corpus must come from the same distribution as the training corpus.
+Otherwise the numbers tell you nothing about the real behaviour of the tokenizer.
+We use a different set of sentences with a similar topic, so the measurement reflects
+generalisation rather than memorisation. A tokenizer that memorises its training data
+looks perfect on that data and useless everywhere else.
+
+Compression and coverage pull in opposite directions. A larger vocabulary gives better
+compression and better coverage, but it also costs more parameters and more memory.
+A smaller vocabulary keeps the parameter table small, but it produces longer sequences
+and therefore more expensive inference. Every practical deployment has to pick a point
+on this curve, and the right point depends on which resource is scarce.
+
+def measure(tokenizer, words):
+    total = 0
+    for word in words:
+        total += len(tokenizer.encode(word))
+    return total / len(words)
+
+SELECT spec_id, tokens_per_char, unknown_rate
+FROM matrix
+WHERE pre_tokenizer = 'unicode' AND algorithm = 'unigram'
+ORDER BY tokens_per_char ASC
+LIMIT 3;
+
+词表 2048 时压缩率是 0.42，词表 4096 时降到 0.35，再往上就基本不动了。
+这说明在这份语料上，词表规模这个变量在 4096 之后已经失效。
+继续加大预算只会让参数变多，效果不会变好，成本却会一直涨。

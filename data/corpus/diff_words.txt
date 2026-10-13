@@ -1,0 +1,21 @@
+# Tokenizer Diff 用的文本。每行一条，`#` 开头的行会被忽略。
+# 挑这些词的理由：它们分别代表「中文合成词」「英文派生词」「中英混排」
+# 「代码符号」「数字」，覆盖了分词差异最主要的几个来源。
+# 看的时候重点不是「谁切得少」，而是「切在哪里、为什么」。
+
+中华人民共和国
+机器学习模型
+数据驱动的模型训练
+国际化的分词策略
+tokenization
+internationalization
+representation
+unbelievable
+tokenizer
+pre_tokenizer
+3.14159
+2026-09-29
+x != y -> z
+a::b => c
+https://example.com/path
+C:\Users\test\data.json

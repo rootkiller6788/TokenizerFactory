@@ -1,0 +1,175 @@
+数据是模型的基础。模型的训练需要大量高质量的语料，而语料的质量决定了模型能达到的高度。
+一份好的语料应当覆盖多种场景，而不是只覆盖一种场景。我们在处理数据时发现，
+同样的语料用不同的方式切分，结果差别很大。分词的方式决定了模型看到的最小单位，
+也决定了模型的训练成本。如果分词太细，一句话会变成很多个符号，训练成本上升；
+如果分词太粗，词表会变得很大，很多符号只出现一次，占用空间却不带来收益。
+因此分词需要在词表大小与序列长度之间做取舍。
+
+词表是一张表，表里放着模型认识的最小单位。表越大，模型能直接认出的词越多，
+但每一行都要占一份参数。表越小，模型需要把词拆开来看，序列变长，
+注意力的开销随序列长度增长。这是一个真实的取舍，不是可以用调参绕过去的问题。
+
+我们做了一个实验：在同一份语料上，用三种不同的方式训练分词器，
+然后用同一份评测语料去量它们的表现。第一种方式从字符出发，把出现次数最多的相邻
+符号对合并起来，合并一次就往表里加一个符号。第二种方式也做合并，但它挑选符号对
+的时候不看次数，而看这两个符号是不是只为彼此而出现。第三种方式从一大袋子候选
+子串出发，给每个子串一个概率，再把概率最低的那些剪掉。
+
+三种方式得到的表差别很大。第一种方式学出来的表里，很多词是完整的一个符号；
+第三种方式学出来的表里，词被切成两三个有意义的片段；第二种方式在小表下学得更快，
+但它的表被分成两半，每个字符都要占两行。
+
+评测要看五个方面。第一是压缩：同样一段文本，切出来的符号越少，越省上下文。
+第二是生育率：每个词平均切出多少符号，这一点在做跨语言比较时特别重要。
+第三是覆盖：表能完整表示多少比例的词。第四是速度：编码和解码每秒能处理多少符号。
+第五是未知：语料里没见过的字符会被折成一个统一的符号，这等于丢掉了信息。
+
+中文的情况比较特别。中文的词之间没有空白，所以切分不能只靠空白来做。
+如果只按空白切，一整句会变成一个词，表里存的是整句而不是词组，
+于是表完全无法用在新的句子上。这是一个很容易犯的错误，而且它不会报错，
+只会在评测的时候表现为覆盖很低、未知很高。
+
+英文的情况相反。英文的词之间有空白，所以按空白切是够用的，
+但英文的词形变化很多，同一个词根可以派生出十几个不同的词。
+这时候把词根和后缀分开学，比把整词当成一个符号更省表空间。
+这也是为什么在大表下不同方式的差距会缩小，在小表下差距会拉大。
+
+代码和符号又是另一种情况。代码里的符号常常连在一起出现，
+比如箭头、双冒号、不等于号、比较运算符。这些组合该不该当成一个符号，
+取决于它们在语料里出现的次数。出现得足够多就该合并，出现一两次就不值得。
+标点符号同理，逗号和句号出现得多，书名号和省略号出现得少。
+
+数字也有讲究。年份、版本号、小数、百分比，这些数字串的结构不一样。
+把整串数字当成一个符号，表里会出现很多只出现一次的串；
+把每一位数字单独切，序列会变得很长。常见的做法是切成一到三位一组，
+这样既能覆盖大部分年份和版本号，又不会让表爆炸。
+
+我们还要看训练的成本。训练一次分词器要多久，这一点在需要反复实验的时候很重要。
+如果一次训练要几分钟，那么搜索空间就只能开得很小；
+如果一次训练只要几秒，就可以把表大小、算法、切分规则都扫一遍。
+本项目的做法是把三者都扫一遍，让数据自己说话，而不是靠经验拍一个数。
+
+最后要说的是可复现。同样的语料、同样的配置，重跑一次必须得到同样的表。
+这一点听起来是理所当然的，但在实现上很容易被破坏：随机数的种子没有固定，
+集合的遍历顺序依赖版本，并行的顺序不稳定，任何一个都会让结果变掉。
+所以每一个用到随机性的地方都要显式地固定种子，并且把并列的情况也考虑进去。
+
+The quick brown fox jumps over the lazy dog. This sentence is often used to test
+tokenizers because it contains every letter of the English alphabet at least once.
+A tokenizer that handles this sentence well will usually handle general English text well.
+Tokenization is the first step of every language model pipeline. It converts raw text
+into a sequence of integer identifiers that the model can consume. The choice of
+tokenization strategy affects the sequence length, the vocabulary size, the training
+cost, and the quality of the final model. Compression measures how many tokens a
+tokenizer produces for a given amount of text. Fertility measures the average number
+of tokens per word, which matters a lot when comparing across languages. Coverage
+measures the fraction of words that the vocabulary can represent without any unknown
+token. Speed measures how many tokens per second the encoder and decoder can process.
+Unknown rate measures how often the tokenizer has to fall back to a special token
+because a character was never seen during training.
+
+def encode(text, vocabulary):
+    tokens = []
+    for word in text.split():
+        tokens.extend(greedy_longest_match(word, vocabulary))
+    return tokens
+
+if (a != b) and (x -> y):
+    return {"status": "ok", "code": 200, "ratio": 0.75}
+
+版本 1.2.3 发布于 2026 年，支持 Python 3.13 与 Node 22。
+准确率从 0.75 提升到 0.83，召回率从 0.61 提升到 0.72，F1 从 0.67 提升到 0.77。
+训练集 12000 条，验证集 2000 条，测试集 2000 条，合计 16000 条。
+
+数据清洗是另一件容易被忽略的事。原始数据里常常混着重复的段落、断掉的句子、
+错位的标点、以及从别处复制过来的无关内容。这些噪声不会让程序报错，
+但会让训练出来的模型学到错误的规律。清洗的第一步是去重，
+第二步是过滤长度异常的数据，第三步是检查字符的分布有没有出现异常。
+每一步都要留下记录，因为清洗掉的数据往往就是出问题时最需要看的那部分。
+
+工程的另一面是部署。一个分词器在实验室里跑得通，不等于在生产环境里跑得通。
+生产环境要考虑内存占用、启动时间、并发下的稳定性，以及出错时的回退方案。
+词表越大，加载越慢，占用的内存越多。如果服务需要频繁地重启，
+那么一个几百毫秒的加载时间就会变成一个真实的成本。
+这也是为什么词表大小不只是一个效果问题，还是一个工程问题。
+
+我们还要说明一件事：评测指标之间会互相拉扯。把词表调大，覆盖会上升，
+未知会下降，但加载会变慢，参数会变多。把词表调小，压缩会变差，
+序列会变长，推理的成本会上升。没有一个配置能在所有方面都最好，
+所以只能先确定哪一方面是硬约束，再在剩下的方面里挑最好的。
+
+这一点在做跨语言的产品时尤其明显。同一个模型要同时服务中文和英文，
+两种语言的字符分布完全不同。英文用很少的字符就能覆盖大部分文本，
+中文需要用几千个字符才能覆盖同样比例的文本。如果只按一种语言调词表，
+另一种语言就会吃亏。常见的做法是分别统计两种语言的需求，再合起来定一个预算。
+
+我们做过的另一组实验是把切分规则也当成一个变量。同一份语料，
+按空白切、按字符切、按更细的规则切，得到的词表完全不同。
+按空白切在英文上够用，在中文上会把整句变成一个词，于是词表里存的是句子。
+按字符切会得到最短的序列上界，但词表里全是单字，模型学不到词组。
+更细的规则会区分汉字、字母、数字、符号和表情，各自成组，再由算法去合并。
+
+结果是：规则的选择对结果的影响，和算法、词表规模一样大，有时还更大。
+这一点在只比较算法和词表规模的报告里是看不到的，因为它被当成了预处理，
+而预处理往往不被当成一个需要比较的变量。本项目把它显式地拿出来比。
+
+A tokenizer is a lossy compressor. It maps an infinite set of strings to a finite
+set of identifiers, and the mapping cannot be inverted for strings that were never
+seen during training. The design goal is to make the loss small for the text that
+actually matters. That is why the training corpus and the evaluation corpus must
+come from the same distribution, and why measuring on the training corpus itself
+tells you almost nothing. A tokenizer that memorises its training corpus will look
+perfect on that corpus and useless everywhere else.
+
+Consider two extreme designs. A vocabulary that contains every word in the corpus
+gives perfect coverage and terrible generalisation, because any new word becomes a
+single unknown token. A vocabulary that contains only single characters gives perfect
+coverage of new words and terrible compression, because every word becomes as many
+tokens as it has characters. Every practical tokenizer sits between these extremes,
+and the interesting question is where exactly it should sit for a given corpus.
+
+The answer depends on the language. For English, a vocabulary of thirty thousand
+subword units covers almost everything and keeps sequences short. For Chinese, the
+same budget behaves differently, because the number of distinct characters is in the
+thousands rather than in the dozens. For code, the distribution is different again:
+identifiers are long, punctuation is dense, and whitespace carries meaning. A single
+tokenizer serving all three must trade them against each other.
+
+words = ["tokenization", "tokenizer", "tokenize", "tokens"]
+for word in words:
+    print(word, len(word), word.upper())
+
+SELECT algorithm, vocab_size, AVG(tokens_per_char) AS ratio
+FROM benchmark
+WHERE pre_tokenizer = "unicode"
+GROUP BY algorithm, vocab_size
+ORDER BY ratio ASC;
+
+以中文为例，「中华人民共和国」这样一个词，可以整体作为一个符号，
+也可以切成「中华」「人民」「共和国」三段，还可以逐字切成七个单字。
+三种切法的序列长度差七倍，而它们用的词表预算是一样的。
+「中华」「人民」「共和国」这些片段本身是有意义的，把它们放在一起学，
+比逐字学更省词表；但如果语料里这些片段出现得不够多，
+逐字切反而更稳，因为逐字永远不会遇到没见过的组合。
+这是中文分词里最基本的一个取舍，也是本项目用 Diff 去展示的第一件事。
+
+本项目用到的语料分成三份，放在 data/corpus 目录下：训练用的 train.txt、
+评测用的 benchmark.txt、以及刻意放在分布之外的 hard.txt。
+在 Windows 上路径写成 C:\data\corpus\train.txt，在 Linux 上写成 /data/corpus/train.txt。
+路径与文件名也必须在训练语料里出现过，否则连文件名都会被切成未知符号，
+而这是评测时最容易忽略的一类失败：模型在正常文本上表现很好，
+一遇到路径、版本号、邮箱地址就开始丢信息。
+
+数字的处理也值得单独说。年份、版本号、小数、百分比、日期，结构都不一样。
+2026 年 9 月 29 日，版本 3.14159，召回率 0.94，准确率 0.49，提升 4 个百分点。
+把整串数字当成一个符号，表里会出现大量只出现一次的串，占了预算却学不到规律；
+把每一位单独切，序列会变得很长。常见的做法是切成一到三位一组。
+
+回到最初的问题：机器学习的语料要用哪种分词方式？这个问题没有统一答案。
+数据驱动的模型训练，用的是同一批语料、同一套评测，但分词策略不同，
+结果就会不同。国际化的产品还要同时服务多种语言，词表的分配更难。
+所以本项目的做法是：把算法、词表规模、切分规则都当成变量扫一遍，
+用同一套指标量出差异，再用 Diff 把差异的来源指出来。
+这样得到的不是一个「最佳配置」，而是一张能解释的取舍地图。
+
+

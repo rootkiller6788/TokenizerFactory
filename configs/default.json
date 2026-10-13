@@ -1,0 +1,56 @@
+{
+  "pipeline_id": "tokenizerfactory",
+  "version_tag": "v1",
+  "seed": 20260929,
+
+  "_corpus_comment": "换语料只改这一块，不动任何代码。这三份语料刻意不同分布：train 用于训练，benchmark 同分布但句子不重复（量泛化），hard 刻意放在分布之外（罕见汉字 / emoji / 特殊符号 / 其它文字系统），用来让「未知」这一维真的有区别。",
+  "corpus": {
+    "train": "data/corpus/train.txt",
+    "benchmark": "data/corpus/benchmark.txt",
+    "hard": "data/corpus/hard.txt",
+    "diff_words": "data/corpus/diff_words.txt"
+  },
+
+  "normalize": {
+    "_comment": "只做 Unicode 归一化。小写化会改变词表内容，属于设计空间（specs.lowercase_variants）而不是预处理 —— 混在一起就没法回答「小写化省了多少 token」。",
+    "form": "NFC"
+  },
+
+  "_specs_comment": "改这一块就是改搜索空间。词表规模的最小档不是随便定的：WordPiece 的基础词表是 2×|字符集|+1，预算必须装得下它，否则训练会退化成按字符切分（配置加载期会直接报错并算出下限）。",
+  "specs": {
+    "algorithms": ["bpe", "wordpiece", "unigram"],
+    "vocab_sizes": [2048, 4096, 8192],
+    "pre_tokenizers": ["unicode", "whitespace", "char"],
+    "lowercase_variants": false,
+    "unigram": {
+      "_comment": "seed_* 决定候选子串池；prune_rounds/prune_ratio 决定剪枝节奏（目标是硬约束，实际轮数通常小于上限）；em_iters 是每轮 EM 的迭代上限，内部还有基于对数似然的提前停止。",
+      "seed_max_len": 6,
+      "seed_min_count": 2,
+      "prune_rounds": 8,
+      "prune_ratio": 0.4,
+      "em_iters": 8
+    }
+  },
+
+  "metrics": {
+    "_comment": "speed_repeats 与 speed_sample_words 一起决定速度基准的稳定性。单轮会被 CPU 降频与调度噪声带偏，所以多轮 + 打乱顺序 + 取中位数。",
+    "speed_repeats": 5,
+    "speed_sample_words": 400,
+    "sample_words": 40
+  },
+
+  "pareto": {
+    "_comment": "主前沿是「词表预算 vs 压缩」—— 这两轴直接对应部署时的硬约束（参数表大小）与运行时的硬约束（序列长度）。额外两条用来回答「换个取舍轴结论会不会变」：一条换成「实际词表 vs 压缩」（当算法撞上饱和时，目标预算不再等于真实成本），一条换成「压缩 vs 编码吞吐」。",
+    "objectives": ["vocab_size", "tokens_per_char"],
+    "extra_objectives": [
+      ["vocab_size_actual", "tokens_per_char"],
+      ["tokens_per_char", "encode_tokens_per_sec"]
+    ]
+  },
+
+  "select": {
+    "_comment": "max_compression_within_budget = 在词表预算内选压缩最好的。这是一个**价值判断**（词表大小是硬约束，它决定参数表规模与显存），不是从数据里推出来的结论；换成 knee 会选出别的 spec，报告里两者都会写明。预算取 2048 而不是 4096：预算本身会改变赢家（见报告第四节的预算敏感性表），2048 是三个算法都还没撞上饱和的那一档，区分度最高。",
+    "rule": "max_compression_within_budget",
+    "vocab_budget": 2048
+  }
+}
