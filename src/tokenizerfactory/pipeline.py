@@ -240,16 +240,20 @@ def run_pipeline(cfg: dict[str, Any], *, verbose: bool = False) -> tuple[Tokeniz
                 f"{spec.vocab_size} —— 「同等词表预算下谁压得更狠」这个对比的前提被破坏了"
             )
 
+        # benchmark 词序列算一次就够：measure 不会改它（采样时自己 copy 一份），
+        # 下面取样本切片也用的是同一份。原来这里调了两次 bench_words，
+        # 等于每个 spec 都把 benchmark 语料重新预分词一遍。
+        bench_words = bundle.bench_words(*key)
         metrics = measure(
             tokenizer,
-            bundle.bench_words(*key),
+            bench_words,
             bundle.hard_words(*key),
             bench_chars=bundle.bench_chars,
             hard_chars=bundle.hard_chars,
             cfg=cfg,
             tag=spec.spec_id,
         )
-        bench_sample = bundle.bench_words(*key)[: int(cfg["metrics"]["sample_words"])]
+        bench_sample = bench_words[: int(cfg["metrics"]["sample_words"])]
         run = TokenizerRun(
             spec=spec,
             vocab=list(tokenizer.vocab),
