@@ -720,12 +720,14 @@ def render_markdown(result: TokenizerResult) -> str:
         "每一格是该算法在该预算下最好的压缩率（括号里是它的预分词规则）。"
     )
     out.append("")
+    # 表与下面的结论用的是同一份行 —— 原来算了两遍
+    gap_rows = budget_sensitivity_rows(result)
     out.append(
         markdown_table(
             ("词表预算",)
             + tuple(result.algorithms())
             + ("该档赢家", "赢家压缩", "该档算法差距", "该档规则差距"),
-            budget_sensitivity_rows(result),
+            gap_rows,
         )
     )
     out.append("")
@@ -739,7 +741,6 @@ def render_markdown(result: TokenizerResult) -> str:
     out.append("")
     # 结论里的数字**从表里算**，不写死 —— 写死的话换一份语料就会出现
     # 「正文说 10.5%、表格写 10.2%」这种自相矛盾，而它不会被任何测试发现。
-    gap_rows = budget_sensitivity_rows(result)
     if gap_rows:
         first, last = gap_rows[0], gap_rows[-1]
         algo = [row[-2] for row in gap_rows if row[-2] != "-"]
