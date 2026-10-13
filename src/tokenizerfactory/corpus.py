@@ -237,5 +237,7 @@ def alphabet_of(words: Iterable[str]) -> set[str]:
     """基础字符集：所有出现过的字符。词表规模必须大于它。"""
     out: set[str] = set()
     for w in words:
-        out |= set(w)
+        # 直接 update，不先给每个词建一个临时 set 再求并 —— 语料上千个词时
+        # 那是上千次多余的分配。结果完全相同。
+        out.update(w)
     return out
