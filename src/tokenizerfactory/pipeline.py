@@ -464,12 +464,9 @@ def _write_csv(out: Path, name: str, rows: list[dict[str, Any]]) -> Path:
         path.write_text("", encoding="utf-8")
         return path
     # 合并所有行出现过的键，保证列不丢 —— 直接拿第一行的 keys 会在
-    # 「第一行恰好没有某个可选字段」时静默丢列
-    fieldnames: list[str] = []
-    for row in rows:
-        for key in row:
-            if key not in fieldnames:
-                fieldnames.append(key)
+    # 「第一行恰好没有某个可选字段」时静默丢列。
+    # dict.fromkeys 去重同时保序（按首次出现），比在 list 上逐个成员检查快得多
+    fieldnames: list[str] = list(dict.fromkeys(k for row in rows for k in row))
     with path.open("w", encoding="utf-8", newline="") as fh:
         writer = csv.DictWriter(fh, fieldnames=fieldnames)
         writer.writeheader()
