@@ -22,6 +22,7 @@ from typing import Any, Sequence
 
 from .compare import (
     dominated_count,
+    dominators,
     frontier_key,
     frontier_pairs,
     hv_contributions,
@@ -431,8 +432,6 @@ def explain(result: TokenizerResult, spec_id: str, *, max_tokens: int = 24) -> s
         lines.append("前沿：不在任何目标对的前沿上")
         for key in result.frontiers:
             objectives = key.split("+")
-            from .compare import dominators
-
             who = dominators(spec_id, ids, points, objectives)
             if who:
                 lines.append(
