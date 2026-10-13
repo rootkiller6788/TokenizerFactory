@@ -107,6 +107,7 @@ class BPETokenizer(Tokenizer):
                     best_rank, best_i = rank, i
             if best_i < 0:
                 break
-            merged = seq[best_i] + seq[best_i + 1]
-            seq = seq[:best_i] + [merged] + seq[best_i + 2 :]
+            # 原地替换这两个位置，而不是 `seq[:i] + [merged] + seq[i+2:]`：
+            # 后者每合并一次就重建一次整个列表，而编码是热路径
+            seq[best_i : best_i + 2] = [seq[best_i] + seq[best_i + 1]]
         return seq
