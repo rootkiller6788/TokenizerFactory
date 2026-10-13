@@ -42,7 +42,7 @@ import heapq
 import json
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 from .schema import utcnow
 
@@ -197,14 +197,20 @@ class LineageDAG:
     def by_kind(self, kind: str) -> list[str]:
         return sorted(n for n, node in self.nodes.items() if node.kind == kind)
 
-    def merge_points(self) -> list[str]:
-        """多输入节点 —— 本项目里就是 Select 与 Artifact（被选中的东西）。"""
-        return sorted(n for n in self.topological() if len(self.nodes[n].inputs) > 1)
+    def merge_points(self, order: Sequence[str] | None = None) -> list[str]:
+        """多输入节点 —— 本项目里就是 Select 与 Artifact（被选中的东西）。
+
+        ``order`` 可传入已算好的拓扑序（调用方本来就要用它遍历节点时，
+        不必再算一遍 —— 拓扑序只取决于图本身，重复计算纯属浪费）。
+        """
+        order = self.topological() if order is None else order
+        return sorted(n for n in order if len(self.nodes[n].inputs) > 1)
 
     def leaves(self) -> list[str]:
         return sorted(n for n, node in self.nodes.items() if not node.outputs)
 
-    def summary(self) -> dict[str, Any]:
+    def summary(self, order: Sequence[str] | None = None) -> dict[str, Any]:
+        order = self.topological() if order is None else order
         kinds: dict[str, int] = {}
         for node in self.nodes.values():
             kinds[node.kind] = kinds.get(node.kind, 0) + 1
@@ -212,21 +218,25 @@ class LineageDAG:
             "nodes": len(self.nodes),
             "edges": len(self.edges),
             "by_kind": kinds,
-            "merge_points": len(self.merge_points()),
+            "merge_points": len(self.merge_points(order)),
         }
 
     # ------------------------------------------------------------------
     # 导出
     # ------------------------------------------------------------------
     def to_dict(self) -> dict[str, Any]:
+        # 拓扑序只算一次：summary() 内部（经由 merge_points）也要用它，
+        # 各算各的话同一个图要被遍历三遍。order 是图自身的性质，
+        # 中途没有改动图，所以共用一份是安全的。
+        order = self.topological()
         return {
-            "nodes": [self.nodes[n].to_dict() for n in self.topological()],
+            "nodes": [self.nodes[n].to_dict() for n in order],
             # 边**排序后**导出。``self.edges`` 的插入顺序取决于「节点是何时被加进来的」，
             # 而 ``from_dict`` 重建时节点是按拓扑序加进来的 —— 不排序的话，
             # 同一个图的两条构建路径会导出两份不同的 lineage.json，
             # 于是「产物是否可复现」这个检查永远过不了。
             "edges": [{"from": a, "to": b} for a, b in sorted(self.edges)],
-            "summary": self.summary(),
+            "summary": self.summary(order),
         }
 
     def save(self, path: str | Path) -> None:
