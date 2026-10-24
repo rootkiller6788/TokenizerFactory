@@ -349,7 +349,7 @@ class LineageDAG:
                 f"[{node.kind:<{kind_w}}]  {stats}"
             )
 
-        merges = self.merge_points()
+        merges = self.merge_points(order)
         if merges:
             lines.append("")
             lines.append(f"收拢点（多输入节点，{len(merges)} 个）：")
