@@ -24,6 +24,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .schema import TokenizerSpec
+
 DEFAULTS: dict[str, Any] = {
     "pipeline_id": "tokenizerfactory",
     "version_tag": "v1",
@@ -201,10 +203,16 @@ def _validate_specs(cfg: dict[str, Any]) -> None:
     if int(uni.get("em_iters", 1)) < 1:
         raise ValueError("specs.unigram.em_iters 至少为 1")
 
-    # 同一批 spec_id 必须唯一 —— DAG 节点 id、矩阵行名、前沿标签全用它
+    # 同一批 spec_id 必须唯一 —— DAG 节点 id、矩阵行名、前沿标签全用它。
+    # 直接复用 TokenizerSpec.spec_id，避免这里手拼的后缀规则与它悄悄分家。
     lowers = [False, True] if s["lowercase_variants"] else [False]
     ids = [
-        f"{a}-v{v}{'+lower' if low else ''}{'' if r == 'unicode' else '+' + r}"
+        TokenizerSpec(
+            algorithm=a,
+            vocab_size=v,
+            pre_tokenizer=r,
+            lowercase=low,
+        ).spec_id
         for a in algos
         for v in sizes
         for r in rules
