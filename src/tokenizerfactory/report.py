@@ -29,7 +29,7 @@ from .compare import (
     reference_point,
 )
 from .metrics import METRIC_DIRECTIONS, METRIC_LABELS, has_timing_axis, point_of
-from .schema import UNK_TOKEN, TokenizerResult
+from .schema import CODE_VERSION, UNK_TOKEN, TokenizerResult
 
 #: 矩阵列（表头与行必须同步改，有测试守着列数一致）
 MATRIX_HEADER: tuple[str, ...] = (
@@ -524,7 +524,7 @@ def render_markdown(result: TokenizerResult) -> str:
             f"- 版本：`{result.version.version_id}`（摘要 `{result.version.digest[:16]}`）"
         )
     out.append(f"- 生成时间：{result.version.created_at if result.version else '-'}")
-    out.append(f"- 代码版本：`{_code_version()}`")
+    out.append(f"- 代码版本：`{CODE_VERSION}`")
     out.append("")
     out.append("## 一、结论")
     out.append("")
@@ -886,12 +886,6 @@ def render_markdown(result: TokenizerResult) -> str:
         out.append(f"| `{name}` | {desc} |")
     out.append("")
     return "\n".join(out)
-
-
-def _code_version() -> str:
-    from .schema import CODE_VERSION
-
-    return CODE_VERSION
 
 
 def meta_payload(result: TokenizerResult) -> dict[str, Any]:
