@@ -151,10 +151,10 @@ def frontier_header(objectives: Sequence[str]) -> tuple[str, ...]:
     看出来的（小语料夹具里没有这个目标对，所以测试没覆盖到），
     现在由「任意两个指标组合都不得出现重复列名」的测试守着。
     """
-    labels = [METRIC_LABELS.get(o, o) for o in objectives]
     head = ["排名", "spec", "算法"]
-    if "实际词表" not in labels:
+    if _frontier_shows_actual_vocab(objectives):
         head.append("实际词表")
+    labels = [METRIC_LABELS.get(o, o) for o in objectives]
     return tuple(head + labels + ["支配数", "超体积增量"])
 
 
