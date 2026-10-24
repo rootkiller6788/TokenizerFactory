@@ -64,6 +64,7 @@
 from __future__ import annotations
 
 import re
+from collections import Counter
 from functools import lru_cache
 from typing import Iterable
 
@@ -234,10 +235,7 @@ def corpus_stats(name: str, text: str, rule: str = "unicode") -> CorpusStats:
 def word_counts(words: Iterable[str]) -> dict[str, int]:
     """词频统计。三个算法都以它为输入，因此**必须先算一次再共用** ——
     各算各的会让「同一语料」这个前提在实现层面悄悄失效。"""
-    out: dict[str, int] = {}
-    for w in words:
-        out[w] = out.get(w, 0) + 1
-    return out
+    return dict(Counter(words))
 
 
 def alphabet_of(words: Iterable[str]) -> set[str]:
