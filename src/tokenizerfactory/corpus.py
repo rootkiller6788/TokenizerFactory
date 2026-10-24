@@ -214,10 +214,7 @@ def corpus_stats(name: str, text: str, rule: str = "unicode") -> CorpusStats:
     这不是 bug，而是本项目想展示的东西，所以画像里把规则记进 ``name``。
     """
     words = pre_tokenize(text, rule)
-    counts: dict[str, int] = {}
-    for ch in text:
-        cls = char_class(ch)
-        counts[cls] = counts.get(cls, 0) + 1
+    counts: Counter[str] = Counter(char_class(ch) for ch in text)
     n_chars = len(text)
     shares = {k: v / n_chars for k, v in counts.items()} if n_chars else {}
     lengths = [len(w) for w in words] or [0]
