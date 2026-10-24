@@ -88,7 +88,8 @@ def has_timing_axis(objectives: Sequence[str]) -> bool:
 
 
 #: 中文标签（报告表头与 CLI 共用，避免两处各写一遍）
-METRIC_LABELS: dict[str, str] = {    "vocab_size": "词表目标",
+METRIC_LABELS: dict[str, str] = {
+    "vocab_size": "词表目标",
     "vocab_size_actual": "实际词表",
     "tokens_per_char": "压缩(tok/字符)",
     "tokens_per_word": "生育率(tok/词)",
