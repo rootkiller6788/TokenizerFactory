@@ -34,6 +34,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
+from ..corpus import alphabet_of
 from ..schema import CONTINUATION_PREFIX, UNK_TOKEN, TokenizerSpec
 from .base import Tokenizer
 from .merge import train_merges
@@ -81,9 +82,7 @@ class WordPieceTokenizer(Tokenizer):
 
     @classmethod
     def train(cls, spec: TokenizerSpec, counts: dict[str, int]) -> "WordPieceTokenizer":
-        alphabet: set[str] = set()
-        for w in counts:
-            alphabet |= set(w)
+        alphabet = alphabet_of(counts)
         base = cls.base_vocab(alphabet)
         target = int(spec.vocab_size)
         if len(base) > target:
