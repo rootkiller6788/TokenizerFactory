@@ -80,8 +80,7 @@ def jaccard(a: Iterable[Any], b: Iterable[Any]) -> float:
     sa, sb = set(a), set(b)
     if not sa and not sb:
         return 1.0
-    union = sa | sb
-    return len(sa & sb) / len(union) if union else 1.0
+    return len(sa & sb) / len(sa | sb)
 
 
 def diff_specs(result: TokenizerResult, cfg: dict[str, Any], max_specs: int = 8) -> list[str]:
