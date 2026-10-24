@@ -41,6 +41,7 @@ import math
 from collections import Counter
 from typing import ClassVar, Iterable
 
+from ..corpus import alphabet_of
 from ..rng import make_rng
 from ..schema import UNK_TOKEN, TokenizerSpec
 from .base import Tokenizer
@@ -260,9 +261,7 @@ class UnigramTokenizer(Tokenizer):
         prune_ratio = float(extra.get("prune_ratio", 0.4))
         em_iters = int(extra.get("em_iters", 8))
 
-        alphabet: set[str] = set()
-        for w in counts:
-            alphabet |= set(w)
+        alphabet = alphabet_of(counts)
         base = cls.base_vocab(alphabet)
         target = int(spec.vocab_size)
         if len(base) > target:
