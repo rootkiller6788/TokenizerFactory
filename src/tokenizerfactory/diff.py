@@ -226,17 +226,10 @@ def compute_diffs(
             ]
             agreement[f"{a}~{b}"] = sum(per_line) / len(per_line) if per_line else 1.0
 
-    mean_agreement = {
-        sid: (
-            sum(
-                value
-                for key, value in agreement.items()
-                if sid in key.split("~")
-            )
-            / max(1, sum(1 for key in agreement if sid in key.split("~")))
-        )
-        for sid in spec_ids
-    }
+    mean_agreement: dict[str, float] = {}
+    for sid in spec_ids:
+        values = [value for key, value in agreement.items() if sid in key.split("~")]
+        mean_agreement[sid] = sum(values) / len(values) if values else 0.0
 
     return {
         "lines": list(lines),
