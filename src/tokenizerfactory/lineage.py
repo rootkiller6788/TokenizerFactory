@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import heapq
 import json
+from collections import Counter
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Sequence
@@ -211,9 +212,7 @@ class LineageDAG:
 
     def summary(self, order: Sequence[str] | None = None) -> dict[str, Any]:
         order = self.topological() if order is None else order
-        kinds: dict[str, int] = {}
-        for node in self.nodes.values():
-            kinds[node.kind] = kinds.get(node.kind, 0) + 1
+        kinds = dict(Counter(node.kind for node in self.nodes.values()))
         return {
             "nodes": len(self.nodes),
             "edges": len(self.edges),
