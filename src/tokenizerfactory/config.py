@@ -24,6 +24,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .metrics import METRIC_DIRECTIONS
 from .schema import TokenizerSpec
 
 DEFAULTS: dict[str, Any] = {
@@ -233,8 +234,6 @@ def _validate_metrics(cfg: dict[str, Any]) -> None:
 
 
 def _validate_pareto(cfg: dict[str, Any]) -> None:
-    from .metrics import METRIC_DIRECTIONS
-
     pairs = [cfg["pareto"]["objectives"]] + [
         list(p) for p in cfg["pareto"]["extra_objectives"]
     ]
