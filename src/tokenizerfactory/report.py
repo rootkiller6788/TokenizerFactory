@@ -382,6 +382,15 @@ def agreement_rows(result: TokenizerResult) -> list[tuple[str, ...]]:
     ]
 
 
+def mean_tokens_rows(result: TokenizerResult) -> list[tuple[str, ...]]:
+    """每个 spec 在 Diff 文本上的平均 token 数（报告与 CLI 共用）。"""
+    data = result.diffs or {}
+    return [
+        (spec_id, f"{value:.2f}")
+        for spec_id, value in sorted((data.get("mean_tokens_per_line") or {}).items())
+    ]
+
+
 # ----------------------------------------------------------------------
 # explain
 # ----------------------------------------------------------------------
@@ -794,15 +803,7 @@ def render_markdown(result: TokenizerResult) -> str:
         out.append("平均每行 token 数（序列长度的直接度量）：")
         out.append("")
         out.append(
-            markdown_table(
-                ("spec", "平均 token 数"),
-                [
-                    (sid, f"{value:.2f}")
-                    for sid, value in sorted(
-                        ((result.diffs or {}).get("mean_tokens_per_line") or {}).items()
-                    )
-                ],
-            )
+            markdown_table(("spec", "平均 token 数"), mean_tokens_rows(result))
         )
         out.append("")
     else:

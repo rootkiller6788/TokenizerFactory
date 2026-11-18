@@ -181,15 +181,7 @@ def _cmd_diff(args: argparse.Namespace) -> int:
     print()
     _print_table(("spec", "平均边界一致度"), report.agreement_rows(result))
     print()
-    _print_table(
-        ("spec", "平均 token 数"),
-        [
-            (sid, f"{value:.2f}")
-            for sid, value in sorted(
-                ((result.diffs or {}).get("mean_tokens_per_line") or {}).items()
-            )
-        ],
-    )
+    _print_table(("spec", "平均 token 数"), report.mean_tokens_rows(result))
     return 0
 
 
