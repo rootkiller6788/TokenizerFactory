@@ -108,9 +108,10 @@ class MergeTrainer:
             f = self.freqs[i]
             for x in seq:
                 self.sym_freq[x] += f
-            for pair in zip(seq, seq[1:]):
+            pairs = list(zip(seq, seq[1:]))
+            for pair in pairs:
                 self.pair_counts[pair] += f
-            for pair in set(zip(seq, seq[1:])):
+            for pair in set(pairs):
                 self.pair_words[pair].add(i)
 
         # BPE 的分数只取决于 pair 频次，所以「计数变了」等价于「分数过期了」，
