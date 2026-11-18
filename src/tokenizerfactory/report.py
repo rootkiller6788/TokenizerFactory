@@ -48,6 +48,17 @@ MATRIX_HEADER: tuple[str, ...] = (
     "前沿",
 )
 
+#: 逐维度展示的指标（``explain`` 与「每个维度上谁最强」两处共用）
+DIMENSION_METRICS: tuple[str, ...] = (
+    "tokens_per_char",
+    "tokens_per_word",
+    "vocab_coverage",
+    "unknown_rate",
+    "hard_unknown_rate",
+    "encode_tokens_per_sec",
+    "decode_tokens_per_sec",
+)
+
 
 def matrix_rows(result: TokenizerResult) -> list[tuple[str, ...]]:
     """矩阵的行。
@@ -402,15 +413,7 @@ def explain(result: TokenizerResult, spec_id: str, *, max_tokens: int = 24) -> s
     lines.append("")
     lines.append("度量：")
     metrics = point_of(run)
-    for name in (
-        "tokens_per_char",
-        "tokens_per_word",
-        "vocab_coverage",
-        "unknown_rate",
-        "hard_unknown_rate",
-        "encode_tokens_per_sec",
-        "decode_tokens_per_sec",
-    ):
+    for name in DIMENSION_METRICS:
         value = metrics[name]
         if name.endswith("_per_sec"):
             text = f"{value:,.0f}"
@@ -809,15 +812,7 @@ def render_markdown(result: TokenizerResult) -> str:
     out.append("## 六、每个维度上谁最强")
     out.append("")
     best_rows: list[tuple[str, ...]] = []
-    for name in (
-        "tokens_per_char",
-        "tokens_per_word",
-        "vocab_coverage",
-        "unknown_rate",
-        "hard_unknown_rate",
-        "encode_tokens_per_sec",
-        "decode_tokens_per_sec",
-    ):
+    for name in DIMENSION_METRICS:
         run = result.best_by(name, METRIC_DIRECTIONS[name])
         if run is None:
             continue
