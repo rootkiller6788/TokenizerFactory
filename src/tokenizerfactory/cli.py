@@ -317,6 +317,7 @@ def _anchor_args(args: argparse.Namespace) -> None:
             if not p.is_absolute():
                 setattr(args, name, str(_PKG_ROOT / p))
 
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="tokenizerfactory",
