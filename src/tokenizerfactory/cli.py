@@ -25,7 +25,9 @@ from typing import Any, Sequence
 from . import report
 from .compare import frontier_key, frontier_pairs
 from .config import load_config
+from .corpus import pre_tokenize
 from .lineage import LineageDAG
+from .normalize import normalize, normalize_words
 from .pipeline import run_pipeline, write_outputs
 from .schema import CorpusStats, TokenizerMetrics, TokenizerResult, TokenizerRun, TokenizerSpec
 from .tokenizers import load_tokenizer
@@ -266,8 +268,6 @@ def _cmd_encode(args: argparse.Namespace) -> int:
         return 1
 
     tokenizer = load_tokenizer(json.loads(path.read_text(encoding="utf-8")))
-    from .corpus import pre_tokenize
-    from .normalize import normalize, normalize_words
 
     text = " ".join(args.text)
     words = normalize_words(
